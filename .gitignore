@@ -58,5 +58,6 @@ typings/
 .env
 
 bin
+obj
 .vs
 *.targets
