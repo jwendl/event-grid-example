@@ -11,7 +11,7 @@ namespace EventHubDataSender
     class Program
     {
         private static EventHubClient eventHubClient;
-        private const string eventHubConnectionString = "Endpoint=sb://jwegexehns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=KOZTlDfkOYhC4qNVUkSjrxsCdCShDC8Z67OOiICcxg8=";
+        private const string eventHubConnectionString = "Endpoint=sb://jwegexehns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=eFw2X8lC1q4F6Cw3iQ3JPqjQJEI2YreFo75xval7YPk=";
         private const string eventHubEntityPath = "jwegexeh";
 
         private static async Task Main(string[] args)
@@ -55,7 +55,7 @@ namespace EventHubDataSender
                         .RuleFor(c => c.Orders, orderFaker.Generate(100));
 
                     var message = JsonConvert.SerializeObject(customerFaker.Generate());
-                    Console.WriteLine($"Sending message: {message}");
+                    Console.WriteLine($"Sending message : {messageIndex}");
                     await eventHubClient.SendAsync(new EventData(Encoding.UTF8.GetBytes(message)));
                 }
                 catch (Exception exception)
