@@ -1,0 +1,334 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the function app that you wish to create."
+      }
+    },
+    "functionStorageAccountName": {
+      "type": "string"
+    },
+    "functionStorageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS"
+      ],
+      "metadata": {
+        "description": "Storage Account type"
+      }
+    },
+    "eventHubStorageAccountName": {
+      "type": "string"
+    },
+    "eventHubStorageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_RAGRS"
+      ],
+      "metadata": {
+        "description": "Storage Account type"
+      }
+    },
+    "eventHubStorageContainerName": {
+      "type": "string"
+    },
+    "eventHubNamespaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the EventHub namespace"
+      }
+    },
+    "eventHubName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Event Hub"
+      }
+    },
+    "messageRetentionInDays": {
+      "type": "int",
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 7,
+      "metadata": {
+        "description": "How long to retain the data in Event Hub"
+      }
+    },
+    "partitionCount": {
+      "type": "int",
+      "defaultValue": 4,
+      "minValue": 2,
+      "maxValue": 32,
+      "metadata": {
+        "description": "Number of partitions chosen"
+      }
+    },
+    "captureEnabled": {
+      "type": "string",
+      "defaultValue": "true",
+      "allowedValues": [
+        "false",
+        "true"
+      ],
+      "metadata": {
+        "description": "Enable or disable the Capture feature for your Event Hub"
+      }
+    },
+    "captureEncodingFormat": {
+      "type": "string",
+      "defaultValue": "Avro",
+      "allowedValues": [
+        "Avro"
+      ],
+      "metadata": {
+        "description": "The encoding format Eventhub capture serializes the EventData when archiving to your storage"
+      }
+    },
+    "captureTime": {
+      "type": "int",
+      "defaultValue": 300,
+      "minValue": 60,
+      "maxValue": 900,
+      "metadata": {
+        "description": "the time window in seconds for the archival"
+      }
+    },
+    "captureSize": {
+      "type": "int",
+      "defaultValue": 314572800,
+      "minValue": 10485760,
+      "maxValue": 524288000,
+      "metadata": {
+        "description": "the size window in bytes for evetn hub capture"
+      }
+    },
+    "captureNameFormat": {
+      "type": "string",
+      "defaultValue": "{Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}",
+      "metadata": {
+        "description": "A Capture Name Format must contain {Namespace}, {EventHub}, {PartitionId}, {Year}, {Month}, {Day}, {Hour}, {Minute} and {Second} fields. These can be arranged in any order with or without delimeters. E.g.  Prod_{EventHub}/{Namespace}\\{PartitionId}_{Year}_{Month}/{Day}/{Hour}/{Minute}/{Second}"
+      }
+    },
+    "databaseAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The DocumentDB database account name."
+      }
+    },
+    "adlAnalyticsName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Data Lake Analytics account to create."
+      }
+    },
+    "adlStoreName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Data Lake Store account to create."
+      }
+    },
+    "adlaLocation": {
+      "type": "string",
+      "allowedValues": [
+        "East US 2",
+        "Central US",
+        "North Europe"
+      ],
+      "defaultValue": "East US 2",
+      "metadata": {
+        "description": "The location in which the resources will be created."
+      }
+    }
+  },
+  "variables": {
+    "hostingPlanName": "[parameters('functionAppName')]",
+    "functionStorageAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', parameters('functionStorageAccountName'))]",
+    "defaultSASKeyName": "RootManageSharedAccessKey",
+    "authRuleResourceId": "[resourceId('Microsoft.EventHub/namespaces/authorizationRules', parameters('eventHubNamespaceName'), variables('defaultSASKeyName'))]",
+    "offerType": "Standard"
+  },
+  "resources": [
+    {
+      "name": "[parameters('functionStorageAccountName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2017-10-01",
+      "location": "[resourceGroup().location]",
+      "kind": "Storage",
+      "sku": {
+        "name": "[parameters('functionStorageAccountType')]"
+      }
+    },
+    {
+      "name": "[parameters('eventHubStorageAccountName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2017-10-01",
+      "location": "[resourceGroup().location]",
+      "kind": "Storage",
+      "sku": {
+        "name": "[parameters('eventHubStorageAccountType')]"
+      }
+    },
+    {
+      "name": "[variables('hostingPlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2015-04-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "name": "[variables('hostingPlanName')]",
+        "computeMode": "Dynamic",
+        "sku": "Dynamic"
+      }
+    },
+    {
+      "name": "[parameters('functionAppName')]",
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2016-08-01",
+      "location": "[resourceGroup().location]",
+      "kind": "functionapp",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('functionStorageAccountName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsDashboard",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('functionStorageAccountName'), ';AccountKey=', listKeys(variables('functionStorageAccountId'),'2015-05-01-preview').key1)]"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('functionStorageAccountName'), ';AccountKey=', listKeys(variables('functionStorageAccountId'),'2015-05-01-preview').key1)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('functionStorageAccountName'), ';AccountKey=', listKeys(variables('functionStorageAccountId'),'2015-05-01-preview').key1)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[toLower(parameters('functionAppName'))]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~1"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "6.5.0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2017-04-01",
+      "name": "[parameters('eventHubNamespaceName')]",
+      "type": "Microsoft.EventHub/namespaces",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard"
+      },
+      "resources": [
+        {
+          "apiVersion": "2017-04-01",
+          "name": "[parameters('eventHubName')]",
+          "type": "EventHubs",
+          "dependsOn": [
+            "[concat('Microsoft.EventHub/namespaces/', parameters('eventHubNamespaceName'))]"
+          ],
+          "properties": {
+            "messageRetentionInDays": "1",
+            "partitionCount": "2",
+            "captureDescription": {
+              "enabled": "true",
+              "encoding": "Avro",
+              "intervalInSeconds": "60",
+              "sizeLimitInBytes": "314572800",
+              "destination": {
+                "name": "EventHubArchive.AzureBlockBlob",
+                "properties": {
+                  "storageAccountResourceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('eventHubStorageAccountName'))]",
+                  "blobContainer": "[parameters('eventHubStorageContainerName')]",
+                  "archiveNameFormat": "{Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "isAutoInflateEnabled": "true",
+        "maximumThroughputUnits": "7"
+      }
+    },
+    {
+      "apiVersion": "2015-04-08",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "name": "[parameters('databaseAccountName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "name": "[parameters('databaseAccountName')]",
+        "databaseAccountOfferType": "[variables('offerType')]",
+        "locations": [
+          {
+            "locationName": "[resourceGroup().location]",
+            "failoverPriority": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('adlStoreName')]",
+      "type": "Microsoft.DataLakeStore/accounts",
+      "location": "[parameters('adlaLocation')]",
+      "apiVersion": "2016-11-01",
+      "dependsOn": [],
+      "tags": {}
+    },
+    {
+      "name": "[parameters('adlAnalyticsName')]",
+      "type": "Microsoft.DataLakeAnalytics/accounts",
+      "location": "[parameters('adlaLocation')]",
+      "apiVersion": "2016-11-01",
+      "dependsOn": [
+        "[concat('Microsoft.DataLakeStore/accounts/', parameters('adlStoreName'))]"
+      ],
+      "tags": {},
+      "properties": {
+        "defaultDataLakeStoreAccount": "[parameters('adlStoreName')]",
+        "dataLakeStoreAccounts": [
+          {
+            "name": "[parameters('adlStoreName')]"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "NamespaceConnectionString": {
+      "type": "string",
+      "value": "[listkeys(variables('authRuleResourceId'), '2017-04-01').primaryConnectionString]"
+    },
+    "SharedAccessPolicyPrimaryKey": {
+      "type": "string",
+      "value": "[listkeys(variables('authRuleResourceId'), '2017-04-01').primaryKey]"
+    },
+    "adlAnalyticsAccount": {
+      "type": "object",
+      "value": "[reference(resourceId('Microsoft.DataLakeAnalytics/accounts', parameters('adlAnalyticsName')))]"
+    },
+    "adlStoreAccount": {
+      "type": "object",
+      "value": "[reference(resourceId('Microsoft.DataLakeStore/accounts', parameters('adlStoreName')))]"
+    }
+  }
+}
