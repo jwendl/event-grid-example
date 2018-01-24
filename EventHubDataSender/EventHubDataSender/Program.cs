@@ -11,7 +11,7 @@ namespace EventHubDataSender
     class Program
     {
         private static EventHubClient eventHubClient;
-        private const string eventHubConnectionString = "Endpoint=sb://jwegexehns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=eFw2X8lC1q4F6Cw3iQ3JPqjQJEI2YreFo75xval7YPk=";
+        private const string eventHubConnectionString = "Endpoint=sb://jwegexehns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=5+VRHkui3YQy10jJmVzh37yTLaIf4hDchbr3ZXeIYJg=";
         private const string eventHubEntityPath = "jwegexeh";
 
         private static async Task Main(string[] args)
